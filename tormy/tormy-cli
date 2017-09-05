@@ -8,6 +8,7 @@ from requests.auth import HTTPDigestAuth
 
 from tormy.spiders import tormy_spider
 from scrapy.crawler import CrawlerProcess
+from collections import defaultdict
 
 
 # Colors for text on stdout
@@ -22,8 +23,7 @@ class Colors:
     UNDERLINE = '\033[4m'
 
 
-class PrintResult:
-
+class Results:
     # URL shortener for magnet links
     # Currently the "mgnet.me" magnet link shortener is used to shorten links.
     def shorten_magnet_uri(magnet_uri):
@@ -38,31 +38,64 @@ class PrintResult:
         else:
             myResponse.raise_for_status()
 
-    # Get results from items.jl and print.
-    def output_results():
-        # If the results.jl file contains content, it implies that the search has yielded relevant results and it will be printed to stdout.
+
+    def process_results():
+        # If the results.jl file contains content, it implies that the search has yielded relevant results and it will be processed.
         try:
             with open('results.jl', 'r') as results:
                 json_results = json.load(results)
+                list_of_results = []
+
+                # Iterate over all the results in the JSON file.
                 for i in range(len(json_results['name'])):
                     title = json_results['name'][i]
                     details = json_results['info'][i]
                     total_seeders = json_results['seeders'][i]
                     total_leechers = json_results['leechers'][i]
-                    magnet_uri = PrintResult.shorten_magnet_uri(json_results['magnet'][i])
+                    magnet_uri = Results.shorten_magnet_uri(json_results['magnet'][i])
 
-                    print("\n" + Colors.OKGREEN + "{}".format(title) + Colors.ENDC)
-                    print(Colors.HEADER + "{}".format(details) + Colors.ENDC)
-                    print(Colors.OKGREEN + "Seeders(" + u'\u2191' + "): " + "{}".format(total_seeders) + Colors.ENDC,Colors.FAIL + "Leechers(" + u'\u2193' + "): "  + "{}".format(total_leechers) + Colors.ENDC)
-                    print("Magnet Link: " + Colors.OKBLUE + Colors.UNDERLINE + "{}".format(magnet_uri) + Colors.ENDC)
+                    # Store the current result in a dictionary.
+                    current_result = {
+                        'title': title,
+                        'details': details,
+                        'total_seeders': total_seeders,
+                        'total_leechers': total_leechers,
+                        'magnet_uri': magnet_uri,
+                    }
 
-        # If the results.jl file is empty, it implies that the search did not yield any result and accordingly message will be printed.
+                    # Add the current result to the list of results.
+                    list_of_results.append(current_result)
+
+            return list_of_results
+
+        # If the results.jl file is empty, it implies that the search did not yield any result and thus cannot be processed.
         except:
             print(Colors.FAIL + "No results! Try different keywords." + Colors.ENDC)
 
+    
+    def output_results(processed_result):
+        for index, result in enumerate(processed_result):
+            title = result['title']
+            details = result['details']
+            total_seeders = result['total_seeders']
+            total_leechers = result['total_leechers']
+            magnet_uri = result['magnet_uri']
+
+            print("\n" + "[" + str(index + 1) + "]" + Colors.OKGREEN + " {}".format(title) + Colors.ENDC)
+            print("     " + Colors.HEADER + "{}".format(details) + Colors.ENDC)
+            print("     " + Colors.OKGREEN + "Seeders(" + u'\u2191' + "): " + "{}".format(total_seeders) + Colors.ENDC,Colors.FAIL + "Leechers(" + u'\u2193' + "): "  + "{}".format(total_leechers) + Colors.ENDC)
+            print("     " + "Magnet Link: " + Colors.OKBLUE + Colors.UNDERLINE + "{}".format(magnet_uri) + Colors.ENDC)
 
 
-# The condition in this 'if' statement means that this script wasn't executed by importing into another script. It means that this script was executed directly.
+    def download_result(selected_torrent, processed_result):
+        # List(Array) index is used here to provide unique ID to torrent results, this way user can input torrent number to select a torrent.(Since list index starts from '0' offset of '1' is used to access torrents from the list.)
+        torrent_to_download_name = processed_result[int(selected_torrent) - 1]['title']
+        torrent_to_download_url = processed_result[int(selected_torrent) - 1]['magnet_uri']
+        
+        print("\nOpening your torrent client to download the following torrent - ")
+        print(Colors.OKGREEN + "{}".format(torrent_to_download_name) + Colors.ENDC)
+
+# The condition in this 'if' statement implies that this script was executed directly and not by importing into another script.
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Search for torrents through the terminal.')
     parser.add_argument('query', action='store', type=str, help='Enter text within quotes to search for torrents.\nExample = tormy-cli \"the matrix\"')
@@ -79,5 +112,13 @@ if __name__ == "__main__":
     process.crawl(my_spider, input_query)
     process.start()
 
-    # After the Spider is finished crawling and the pipeline is done processing, print the results.
-    PrintResult.output_results()
+    # After the Spider is finished crawling and the pipeline is done processing, process the results.
+    processed_result = Results.process_results()
+
+    # Pass the processed result for output.
+    Results.output_results(processed_result)
+
+    # Get input to select a torrent.
+    selected_torrent = input("\nSelect a torrent: ")
+    # Download the selected torrent from the processed => outputted result.
+    Results.download_result(selected_torrent, processed_result)

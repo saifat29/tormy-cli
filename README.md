@@ -2,10 +2,10 @@
 
 Terminal tool for searching torrents providing direct magnet links.
 
-	./tormy-cli "batman begins"
+	./tormy-cli "big buck bunny"
 	
 
- ![Usage image](https://imgur.com/vEUdl4j.png)
+ ![Usage image](https://i.imgur.com/Y5T0KvH.png)
 
 
 Note: Works only with Python 3.x
@@ -23,8 +23,8 @@ Usage
 usage: ./tormy-cli [-h] query
 
 positional arguments:
-  query	Enter text within quotes to search for torrents.
-  Example = tormy-cli "batman begins"
+  query	  Enter text within quotes to search for torrents.
+  Example = tormy-cli "big buck bunny"
 
 optional arguments:
   -h, --help  show this help message and exit
