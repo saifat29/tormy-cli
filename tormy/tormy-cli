@@ -4,6 +4,7 @@ import scrapy
 import argparse
 import json
 import requests
+import subprocess
 from requests.auth import HTTPDigestAuth
 
 from tormy.spiders import tormy_spider
@@ -52,7 +53,8 @@ class Results:
                     details = json_results['info'][i]
                     total_seeders = json_results['seeders'][i]
                     total_leechers = json_results['leechers'][i]
-                    magnet_uri = Results.shorten_magnet_uri(json_results['magnet'][i])
+                    magnet_uri = json_results['magnet'][i]
+                    short_magnet_uri = Results.shorten_magnet_uri(magnet_uri)
 
                     # Store the current result in a dictionary.
                     current_result = {
@@ -61,6 +63,7 @@ class Results:
                         'total_seeders': total_seeders,
                         'total_leechers': total_leechers,
                         'magnet_uri': magnet_uri,
+                        'short_magnet_uri': short_magnet_uri,
                     }
 
                     # Add the current result to the list of results.
@@ -80,11 +83,12 @@ class Results:
             total_seeders = result['total_seeders']
             total_leechers = result['total_leechers']
             magnet_uri = result['magnet_uri']
+            short_magnet_uri = result['short_magnet_uri']
 
             print("\n" + "[" + str(index + 1) + "]" + Colors.OKGREEN + " {}".format(title) + Colors.ENDC)
             print("     " + Colors.HEADER + "{}".format(details) + Colors.ENDC)
             print("     " + Colors.OKGREEN + "Seeders(" + u'\u2191' + "): " + "{}".format(total_seeders) + Colors.ENDC,Colors.FAIL + "Leechers(" + u'\u2193' + "): "  + "{}".format(total_leechers) + Colors.ENDC)
-            print("     " + "Magnet Link: " + Colors.OKBLUE + Colors.UNDERLINE + "{}".format(magnet_uri) + Colors.ENDC)
+            print("     " + "Magnet Link: " + Colors.OKBLUE + Colors.UNDERLINE + "{}".format(short_magnet_uri) + Colors.ENDC)
 
 
     def download_result(selected_torrent, processed_result):
@@ -93,7 +97,14 @@ class Results:
         torrent_to_download_url = processed_result[int(selected_torrent) - 1]['magnet_uri']
         
         print("\nOpening your torrent client to download the following torrent - ")
-        print(Colors.OKGREEN + "{}".format(torrent_to_download_name) + Colors.ENDC)
+        print("\n" + "[{}]".format(selected_torrent) + Colors.OKGREEN + " {}".format(torrent_to_download_name) + Colors.ENDC + "\n")
+
+        # Try opening the torrent using the 'default' torrent client.
+        open_status_code = subprocess.call(["open", torrent_to_download_url])
+        
+        # If opening the torrent returns a non-zero code, it implies that there was an error.
+        if open_status_code != 0:
+            print("\n" + Colors.FAIL + "Error opening your torrent. Install a torrent client and try again." + Colors.ENDC +"\n")
 
 # The condition in this 'if' statement implies that this script was executed directly and not by importing into another script.
 if __name__ == "__main__":
@@ -117,8 +128,15 @@ if __name__ == "__main__":
 
     # Pass the processed result for output.
     Results.output_results(processed_result)
-
-    # Get input to select a torrent.
-    selected_torrent = input("\nSelect a torrent: ")
-    # Download the selected torrent from the processed => outputted result.
-    Results.download_result(selected_torrent, processed_result)
+    
+    while True:
+        # Get input to select a torrent.
+        selected_torrent = input("\nSelect a torrent: ")
+        
+        # Check if the input is a number, and within the range of list of torrents available for download.
+        if (selected_torrent.isnumeric()) and (int(selected_torrent) > 0) and (int(selected_torrent) <= len(processed_result)):
+            # Download the selected torrent from the processed => outputted result.
+            Results.download_result(selected_torrent, processed_result)
+            break
+        else:
+            print("\nError! Enter a valid input.")
