@@ -13,7 +13,7 @@ setup(
         'cffi==1.10.0',
         'chardet==3.0.4',
         'constantly==15.1.0',
-        'cryptography==2.0.3',
+        'cryptography==3.2',
         'cssselect==1.0.1',
         'hyperlink==17.3.1',
         'idna==2.6',
