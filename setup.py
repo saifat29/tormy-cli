@@ -27,7 +27,7 @@ setup(
         'pyOpenSSL==17.2.0',
         'queuelib==1.4.2',
         'requests==2.18.4',
-        'Scrapy==1.4.0',
+        'Scrapy==2.6.2',
         'service-identity==17.0.0',
         'six==1.10.0',
         'Twisted==17.5.0',
